@@ -195,12 +195,12 @@ void Molecule::print_mol_rot_type() const {
 
   fmt::print("Molecule is a ");
   if (a == b == c) {
-    fmt::println("SPHERICAL top");
+    fmt::println("SPHERICAL top\n");
   } else if (a < b && b == c) {
-    fmt::println("LINEAR molecule");
+    fmt::println("LINEAR molecule\n");
   } else if (a == b && b == c) {
-    fmt::println("SYMMETRIC top");
+    fmt::println("SYMMETRIC top\n");
   } else {
-    fmt::println("ASYMMETRIC top");
+    fmt::println("ASYMMETRIC top\n");
   }
 }

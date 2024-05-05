@@ -79,8 +79,8 @@ void printAllDihedrals(const Molecule &mol, double dist_cutoff = 4.0) {
   fmt::println("");
 }
 
-int main() {
-  Molecule mol("../input/acetaldehyde.dat");
+void run_example(const std::string &fname) {
+  Molecule mol(fname);
   mol.print();
   printAllDists(mol);
   printAllAngles(mol);
@@ -94,6 +94,11 @@ int main() {
   auto moments = mol.prime_mom_intertia();
   fmt::println("Principal moments: {}\n", moments);
   mol.print_mol_rot_type();
-
   // TODO: Compute Rotational Constats
+}
+
+int main() {
+  run_example("../input/acetaldehyde.dat");
+  run_example("../input/benzene.dat");
+  run_example("../input/allene.dat");
 }
