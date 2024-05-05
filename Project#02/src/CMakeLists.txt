@@ -10,6 +10,10 @@ find_package(fmt CONFIG REQUIRED)
 
 find_package(Eigen3 CONFIG REQUIRED)
 
+add_compile_options(-fsanitize=address)
+add_link_options(-fsanitize=address)
+
+
 add_executable(main main.cpp Molecule.cpp Hessian.cpp)
 target_link_libraries(main PRIVATE fmt::fmt Eigen3::Eigen)
 target_compile_options(main PRIVATE -Wall -Wextra -Wpedantic -Werror)

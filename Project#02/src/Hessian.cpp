@@ -39,12 +39,15 @@ void Hessian::build_matrix(const HessCols &hess_cols) {
   // Number of rows in hessian file = 3 * N^2
   int mat_rows = sqrt(3 * xs.size()); // sqrt(9 * N^2)
   int n_atoms = sqrt(xs.size() / 3);  // N
+  
+  fmt::println("mat_rows = {}\nn_atoms = {}", mat_rows, n_atoms);
 
   data = Eigen::MatrixXd::Zero(mat_rows, mat_rows);
 
   for (int row = 0; row < mat_rows; ++row) {
     for (int j = 0; j < n_atoms; ++j) {
-      int col_idx = j * n_atoms;
+      int col_idx = j * 3;
+      fmt::println("row = {}, j = {}, col_idx = {}", row, j, col_idx);
 
       data(row, col_idx) = xs[row * n_atoms + j];
       data(row, col_idx + 1) = ys[row * n_atoms + j];
