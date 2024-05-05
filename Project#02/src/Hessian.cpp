@@ -87,7 +87,7 @@ void Hessian::get_freq() const {
   // Conversion factor from Ha/Bohr^2 -> cm^-1
   double factor = 5140.4845318177295;
 
-  fmt::println("eigvals = {}", vals);
+  fmt::println("\neigvals = {}\n", vals);
   fmt::println("we = {}\n", factor * vals.cwiseAbs().cwiseSqrt());
 
 }
