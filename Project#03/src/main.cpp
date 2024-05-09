@@ -1,9 +1,12 @@
+#include "IntegralParser.h"
+#include "SCF.h"
 #include "fmt/core.h"
 #include "fmt/ranges.h"
-#include "IntegralParser.h"
 
 void run_example(const std::string &dir_name) {
   IntegralParser integrals(dir_name);
+  SCF scf(integrals);
+  scf.run();
 
 }
 
