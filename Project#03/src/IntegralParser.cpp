@@ -19,6 +19,10 @@ IntegralParser::IntegralParser(const std::string &dir_name) {
 
   orthogonalize_S();
   std::cout << "Orthogonalized S\n" << S << "\n\n";
+
+  mu.x = one_elec_parser(dir_name + "/mux.dat");
+  mu.y = one_elec_parser(dir_name + "/muy.dat");
+  mu.z = one_elec_parser(dir_name + "/muz.dat");
 }
 
 int IntegralParser::get_nelec() const { return n_elec; }
@@ -27,6 +31,7 @@ Eigen::MatrixXd IntegralParser::get_S() const { return S; }
 Eigen::MatrixXd IntegralParser::get_T() const { return T; }
 Eigen::MatrixXd IntegralParser::get_V() const { return V; }
 Eigen::VectorXd IntegralParser::get_eri() const { return eri; }
+DipoleIntegrals IntegralParser::get_mu() const { return mu; }
 
 std::ifstream get_file(const std::string &fname) {
   std::ifstream file(fname);

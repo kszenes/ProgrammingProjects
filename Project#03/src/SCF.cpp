@@ -62,11 +62,6 @@ Errors SCF::get_errors() const {
   return {e_error, d_error};
 }
 
-Eigen::MatrixXd SCF::get_fock_mo() const {
-  Eigen::MatrixXd Fock_mo = Coeffs.transpose() * Fock * Coeffs;
-  return Fock_mo;
-}
-
 void SCF::run() {
   fmt::println("\n=== Starting SCF ===\n");
   fmt::println("{:>4} {:>15} {:>15} {:>15} {:>15}", "iter", "E_elec", "E_tot",
@@ -82,9 +77,8 @@ void SCF::run() {
                  e_error, d_error);
     if (abs(e_error) < tol || abs(d_error) < tol) {
       fmt::println("\n === SCF Converged === \n");
-      std::cout << "Fock in MO basis\n" << get_fock_mo() << "\n\n";
       return;
     }
   }
-  fmt::println("\n === SCF FAILED === ");
+  throw std::runtime_error("SCF FAILED to converge");
 }

@@ -9,12 +9,11 @@ struct Errors {
   double density;
 };
 
-class SCF {
+struct SCF {
 public:
   SCF(IntegralParser &integrals);
   void run();
 
-private:
   void build_core_hamiltonian();
   void build_guess();
   void compute_energy();

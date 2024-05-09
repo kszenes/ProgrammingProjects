@@ -4,6 +4,12 @@
 #include "Eigen/Core"
 #include <string>
 
+struct DipoleIntegrals {
+  Eigen::MatrixXd x;
+  Eigen::MatrixXd y;
+  Eigen::MatrixXd z;
+};
+
 class IntegralParser {
 public:
   IntegralParser(const std::string &dir_name);
@@ -13,6 +19,7 @@ public:
   Eigen::MatrixXd get_T() const;
   Eigen::MatrixXd get_V() const;
   Eigen::VectorXd get_eri() const;
+  DipoleIntegrals get_mu() const;
 
 private:
   void parse_e_nuc(const std::string &fname);
@@ -30,6 +37,9 @@ private:
   Eigen::MatrixXd H_core;
 
   Eigen::VectorXd eri;
+
+  DipoleIntegrals mu;
+
 };
 
 #endif // INTEGRAL_PARSER_H
