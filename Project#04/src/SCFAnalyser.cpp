@@ -206,7 +206,7 @@ Eigen::MatrixXd Analyser::get_eri_mo(const bool fast_algo) const {
   return eri_mo;
 }
 
-void Analyser::compute_mp2_energy() const {
+double Analyser::get_mp2_correction() const {
   const int n_ao = scf.n_ao;
   const int n_occ = scf.n_occ;
   double mp2_e = 0.0;
@@ -227,11 +227,14 @@ void Analyser::compute_mp2_energy() const {
       }
     }
   }
-  fmt::println("MP2 Energy {}\n", mp2_e);
+  return mp2_e;
 }
 
 void Analyser::analyze() {
-  fmt::println("\n=== Analyzing ===\n\n");
+  fmt::println("\n === Analyzing ===\n");
   print_mo_coeffs();
-  compute_mp2_energy();
+  double mp2_e = get_mp2_correction();
+  fmt::println("SCF Energy     = {: 17.12f}", scf.get_etot());
+  fmt::println("MP2 Correction = {: 17.12f}", mp2_e);
+  fmt::println("MP2 Energy     = {: 17.12f}", scf.get_etot() + mp2_e);
 }

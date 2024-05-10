@@ -25,7 +25,7 @@ private:
   void analyze_dipole() const;
 
   Eigen::MatrixXd get_eri_mo(const bool fast_algo = true) const;
-  void compute_mp2_energy() const;
+  double get_mp2_correction() const;
 
   IntegralParser integrals;
   SCF scf;

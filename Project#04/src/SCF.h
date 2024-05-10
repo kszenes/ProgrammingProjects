@@ -22,6 +22,8 @@ public:
   void build_coeffs();
   void build_density();
   Eigen::MatrixXd get_fock_mo() const;
+  double get_eelec() const;
+  double get_etot() const;
 
   const int n_ao = 0;
   const int n_occ = 0;

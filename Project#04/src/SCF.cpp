@@ -62,6 +62,14 @@ Errors SCF::get_errors() const {
   return {e_error, d_error};
 }
 
+double SCF::get_eelec() const {
+  return energies.back();
+}
+
+double SCF::get_etot() const {
+  return energies.back() + integrals.get_vnn();
+}
+
 void SCF::run() {
   fmt::println("\n=== Starting SCF ===\n");
   fmt::println("{:>4} {:>15} {:>15} {:>15} {:>15}", "iter", "E_elec", "E_tot",
