@@ -39,7 +39,6 @@ private:
   Eigen::VectorXd eri;
 
   DipoleIntegrals mu;
-
 };
 
 #endif // INTEGRAL_PARSER_H

@@ -15,12 +15,17 @@ public:
 private:
   void parse_geometry(const std::string &dir_name);
   void print_fock_mo() const;
+  void print_mo_coeffs() const;
+  Eigen::VectorXd get_mo_energies() const;
   Eigen::Vector3d get_com() const;
   void translate(const Eigen::Vector3d &vec);
 
   Eigen::Vector3d compute_dipole_nuc() const;
   Eigen::Vector3d compute_dipole_elec() const;
   void analyze_dipole() const;
+
+  Eigen::MatrixXd get_eri_mo(const bool fast_algo = true) const;
+  void compute_mp2_energy() const;
 
   IntegralParser integrals;
   SCF scf;

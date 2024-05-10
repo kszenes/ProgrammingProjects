@@ -1,4 +1,5 @@
 #include "SCFAnalyser.h"
+#include "Indexing.h"
 #include "fmt/core.h"
 #include "masses.h"
 #include <fstream>
@@ -35,6 +36,18 @@ void Analyser::parse_geometry(const std::string &dir_name) {
 void Analyser::print_fock_mo() const {
   Eigen::MatrixXd Fock_mo = scf.Coeffs.transpose() * scf.Fock * scf.Coeffs;
   std::cout << "Fock in MO basis\n" << Fock_mo << "\n\n";
+}
+
+void Analyser::print_mo_coeffs() const {
+  std::cout << "MO Coeffs\n" << scf.Coeffs << "\n\n";
+}
+
+Eigen::VectorXd Analyser::get_mo_energies() const {
+  Eigen::VectorXd mo_energies =
+      (scf.Coeffs.transpose() * scf.Fock * scf.Coeffs).diagonal();
+
+  std::cout << "MO energies\n" << mo_energies << "\n\n";
+  return mo_energies;
 }
 
 // Center-of-mass
@@ -87,10 +100,138 @@ void Analyser::analyze_dipole() const {
   std::cout << "Dipole\n" << dipole_tot << "\n\n";
 }
 
+Eigen::MatrixXd Analyser::get_eri_mo(const bool fast_algo) const {
+  Eigen::VectorXd eri_mo = Eigen::VectorXd::Zero(integrals.get_eri().size());
+  const Eigen::MatrixXd &coeffs = scf.Coeffs;
+
+  const int n_ao = scf.n_ao;
+  double val;
+  if (fast_algo) {
+#define INDEX(mu, nu, lambda, sigma)                                           \
+  mu + nu *n_ao + lambda *n_ao *n_ao + sigma *n_ao *n_ao *n_ao
+
+    std::vector<double> tmp_s(std::pow(n_ao, 4), 0);
+    std::vector<double> tmp_r(std::pow(n_ao, 4), 0);
+    std::vector<double> tmp_q(std::pow(n_ao, 4), 0);
+    double val = 0.0;
+
+    // (mu, nu, lambda, sigma) -> (mu, nu, lambda, s)
+    for (int p = 0; p < n_ao; ++p) {
+      for (int q = 0; q < n_ao; ++q) {
+        for (int r = 0; r < n_ao; ++r) {
+          for (int s = 0; s < n_ao; ++s) {
+            val = 0.0;
+            for (int sigma = 0; sigma < n_ao; ++sigma) {
+              val += coeffs(sigma, s) *
+                     integrals.get_eri()(get_4index(p, q, r, sigma));
+            }
+            tmp_s[INDEX(p, q, r, s)] = val;
+          }
+        }
+      }
+    }
+
+    // (mu, nu, lambda, s) -> (mu, nu, r, s)
+    for (int p = 0; p < n_ao; ++p) {
+      for (int q = 0; q < n_ao; ++q) {
+        for (int r = 0; r < n_ao; ++r) {
+          for (int s = 0; s < n_ao; ++s) {
+            val = 0.0;
+            for (int lambda = 0; lambda < n_ao; ++lambda) {
+              val += coeffs(lambda, r) * tmp_s[INDEX(p, q, lambda, s)];
+            }
+            tmp_r[INDEX(p, q, r, s)] = val;
+          }
+        }
+      }
+    }
+
+    // (mu, nu, r, s) -> (mu, q, r, s)
+    for (int p = 0; p < n_ao; ++p) {
+      for (int q = 0; q < n_ao; ++q) {
+        for (int r = 0; r < n_ao; ++r) {
+          for (int s = 0; s < n_ao; ++s) {
+            val = 0.0;
+            for (int nu = 0; nu < n_ao; ++nu) {
+              val += coeffs(nu, q) * tmp_r[INDEX(p, nu, r, s)];
+            }
+            tmp_q[INDEX(p, q, r, s)] = val;
+          }
+        }
+      }
+    }
+
+    // (mu, q, r, s) -> (p, q, r, s)
+    for (int p = 0; p < n_ao; ++p) {
+      for (int q = 0; q < n_ao; ++q) {
+        for (int r = 0; r < n_ao; ++r) {
+          for (int s = 0; s < n_ao; ++s) {
+            val = 0.0;
+            for (int mu = 0; mu < n_ao; ++mu) {
+              val += coeffs(mu, p) * tmp_q[INDEX(mu, q, r, s)];
+            }
+            eri_mo(get_4index(p, q, r, s)) = val;
+          }
+        }
+      }
+    }
+
+  } else {
+    // MO indices
+    for (int p = 0; p < n_ao; ++p) {
+      for (int q = 0; q < n_ao; ++q) {
+        for (int r = 0; r < n_ao; ++r) {
+          for (int s = 0; s < n_ao; ++s) {
+            // AO indices
+            val = 0;
+            for (int mu = 0; mu < n_ao; ++mu) {
+              for (int nu = 0; nu < n_ao; ++nu) {
+                for (int lambda = 0; lambda < n_ao; ++lambda) {
+                  for (int sigma = 0; sigma < n_ao; ++sigma) {
+                    val +=
+                        coeffs(mu, p) * coeffs(nu, q) *
+                        integrals.get_eri()(get_4index(mu, nu, lambda, sigma)) *
+                        coeffs(lambda, r) * coeffs(sigma, s);
+                  }
+                }
+              }
+            }
+            eri_mo(get_4index(p, q, r, s)) = val;
+          }
+        }
+      }
+    }
+  }
+
+  return eri_mo;
+}
+
+void Analyser::compute_mp2_energy() const {
+  const int n_ao = scf.n_ao;
+  const int n_occ = scf.n_occ;
+  double mp2_e = 0.0;
+
+  Eigen::VectorXd mo_e = get_mo_energies();
+  Eigen::VectorXd eri_mo = get_eri_mo();
+
+  for (int i = 0; i < n_occ; ++i) {
+    for (int j = 0; j < n_occ; ++j) {
+      for (int a = n_occ; a < n_ao; ++a) {
+        for (int b = n_occ; b < n_ao; ++b) {
+          double numer = eri_mo(get_4index(i, a, j, b)) *
+                         (2 * eri_mo(get_4index(i, a, j, b)) -
+                          eri_mo(get_4index(i, b, j, a)));
+          double denom = mo_e(i) + mo_e(j) - mo_e(a) - mo_e(b);
+          mp2_e += numer / denom;
+        }
+      }
+    }
+  }
+  fmt::println("MP2 Energy {}\n", mp2_e);
+}
+
 void Analyser::analyze() {
   fmt::println("\n=== Analyzing ===\n\n");
-  print_fock_mo();
-
-  translate(-get_com());
-  analyze_dipole();
+  print_mo_coeffs();
+  compute_mp2_energy();
 }
