@@ -1,3 +1,4 @@
+#include "CC.h"
 #include "IntegralParser.h"
 #include "SCF.h"
 #include "SCFAnalyser.h"
@@ -10,6 +11,9 @@ void run_example(const std::string &dir_name) {
   scf.run();
   Analyser analyser(dir_name, integrals, scf);
   analyser.analyze();
+
+  CC cc(integrals, scf);
+  cc.run();
 }
 
 int main() { run_example("../input/h2o/STO-3G"); }

@@ -4,6 +4,7 @@
 #include "Eigen/Core"
 #include "IntegralParser.h"
 #include "SCF.h"
+#include "unsupported/Eigen/CXX11/Tensor"
 #include <vector>
 
 class Analyser {
@@ -24,7 +25,7 @@ private:
   Eigen::Vector3d compute_dipole_elec() const;
   void analyze_dipole() const;
 
-  Eigen::MatrixXd get_eri_mo(const bool fast_algo = true) const;
+  Eigen::VectorXd get_eri_mo(const bool fast_algo = true) const;
   double get_mp2_correction() const;
 
   IntegralParser integrals;

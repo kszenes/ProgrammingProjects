@@ -100,7 +100,7 @@ void Analyser::analyze_dipole() const {
   std::cout << "Dipole\n" << dipole_tot << "\n\n";
 }
 
-Eigen::MatrixXd Analyser::get_eri_mo(const bool fast_algo) const {
+Eigen::VectorXd Analyser::get_eri_mo(const bool fast_algo) const {
   Eigen::VectorXd eri_mo = Eigen::VectorXd::Zero(integrals.get_eri().size());
   const Eigen::MatrixXd &coeffs = scf.Coeffs;
 

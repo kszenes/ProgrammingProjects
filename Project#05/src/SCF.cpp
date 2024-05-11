@@ -62,12 +62,14 @@ Errors SCF::get_errors() const {
   return {e_error, d_error};
 }
 
-double SCF::get_eelec() const {
-  return energies.back();
-}
+double SCF::get_eelec() const { return energies.back(); }
 
-double SCF::get_etot() const {
-  return energies.back() + integrals.get_vnn();
+double SCF::get_etot() const { return energies.back() + integrals.get_vnn(); }
+
+Eigen::VectorXd SCF::get_mo_energies() const {
+  Eigen::VectorXd mo_energies = (Coeffs.transpose() * Fock * Coeffs).diagonal();
+
+  return mo_energies;
 }
 
 void SCF::run() {

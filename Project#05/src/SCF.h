@@ -24,6 +24,7 @@ public:
   Eigen::MatrixXd get_fock_mo() const;
   double get_eelec() const;
   double get_etot() const;
+  Eigen::VectorXd get_mo_energies() const;
 
   const int n_ao = 0;
   const int n_occ = 0;

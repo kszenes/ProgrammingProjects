@@ -12,7 +12,7 @@ find_package(Eigen3 CONFIG REQUIRED)
 
 # add_compile_options(-fsanitize=address) add_link_options(-fsanitize=address)
 
-add_executable(main main.cpp IntegralParser.cpp SCF.cpp SCFAnalyser.cpp)
+add_executable(main main.cpp IntegralParser.cpp SCF.cpp SCFAnalyser.cpp CC.cpp)
 target_link_libraries(main PRIVATE fmt::fmt Eigen3::Eigen)
 target_compile_options(main PRIVATE -Wall -Wextra -Wpedantic -Werror)
 install(TARGETS main DESTINATION ${CMAKE_BINARY_DIR})
