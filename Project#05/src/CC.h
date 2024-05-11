@@ -14,7 +14,7 @@ public:
   void run();
 
 private:
-  Eigen::VectorXd get_eri_mo(const bool fast_algo = true) const;
+  Eigen::VectorXd get_eri_mo() const;
   Eigen::MatrixXd spatial2spin_1b(const Eigen::MatrixXd &mat_in) const;
   Eigen::Tensor<double, 4>
   spatial2spin_2b(const Eigen::VectorXd &tensor_in) const;
@@ -22,9 +22,22 @@ private:
   antisymmetrise(const Eigen::Tensor<double, 4> &tensor_in) const;
   Eigen::MatrixXd get_fock_spin() const;
   void init_amplitudes();
-  void compute_mp2_e() const;
+  double compute_mp2_energy() const;
   void build_taus();
+
   void build_intermediates();
+  void build_F();
+  void build_W();
+
+  void build_denominators();
+  void build_D1();
+  void build_D2();
+
+  void update_amplitudes();
+  Eigen::MatrixXd compute_t1() const;
+  Eigen::Tensor<double, 4> compute_t2() const;
+
+  double get_cc_energy();
 
   void prepare();
 
@@ -37,7 +50,7 @@ private:
   SCF scf_;
   Eigen::Tensor<double, 4> eri_anti; // <pq||rs> antsimmetrised in spin basis
   Eigen::MatrixXd fock;              // in spin basis
-                                     //
+
   // Ampllitudes
   Eigen::MatrixXd t1;
   Eigen::Tensor<double, 4> t2;
@@ -47,6 +60,11 @@ private:
   // Intermediates
   Eigen::MatrixXd F;
   Eigen::Tensor<double, 4> W;
+  // Denominator Arrays
+  Eigen::MatrixXd D1;
+  Eigen::Tensor<double, 4> D2;
+
+  double energy;
 };
 
 #endif // CC_H

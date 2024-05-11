@@ -1,104 +1,77 @@
 #include "CC.h"
 #include "fmt/core.h"
+#include <cmath>
 #include <iostream>
 
-Eigen::VectorXd CC::get_eri_mo(const bool fast_algo) const {
+Eigen::VectorXd CC::get_eri_mo() const {
   Eigen::VectorXd eri_mo = Eigen::VectorXd::Zero(ints_.get_eri().size());
   const Eigen::MatrixXd &coeffs = scf_.Coeffs;
 
-  double val;
-  if (fast_algo) {
 #define INDEX(mu, nu, lambda, sigma)                                           \
   mu + nu *scf_.n_ao + lambda *scf_.n_ao *scf_.n_ao +                          \
       sigma *scf_.n_ao *scf_.n_ao *scf_.n_ao
 
-    std::vector<double> tmp_s(std::pow(scf_.n_ao, 4), 0);
-    std::vector<double> tmp_r(std::pow(scf_.n_ao, 4), 0);
-    std::vector<double> tmp_q(std::pow(scf_.n_ao, 4), 0);
-    double val = 0.0;
+  std::vector<double> tmp_s(std::pow(scf_.n_ao, 4), 0);
+  std::vector<double> tmp_r(std::pow(scf_.n_ao, 4), 0);
+  std::vector<double> tmp_q(std::pow(scf_.n_ao, 4), 0);
+  double val = 0.0;
 
-    // (mu, nu, lambda, sigma) -> (mu, nu, lambda, s)
-    for (int p = 0; p < scf_.n_ao; ++p) {
-      for (int q = 0; q < scf_.n_ao; ++q) {
-        for (int r = 0; r < scf_.n_ao; ++r) {
-          for (int s = 0; s < scf_.n_ao; ++s) {
-            val = 0.0;
-            for (int sigma = 0; sigma < scf_.n_ao; ++sigma) {
-              val += coeffs(sigma, s) *
-                     ints_.get_eri()(get_4index(p, q, r, sigma));
-            }
-            tmp_s[INDEX(p, q, r, s)] = val;
+  // (mu, nu, lambda, sigma) -> (mu, nu, lambda, s)
+  for (int p = 0; p < scf_.n_ao; ++p) {
+    for (int q = 0; q < scf_.n_ao; ++q) {
+      for (int r = 0; r < scf_.n_ao; ++r) {
+        for (int s = 0; s < scf_.n_ao; ++s) {
+          val = 0.0;
+          for (int sigma = 0; sigma < scf_.n_ao; ++sigma) {
+            val +=
+                coeffs(sigma, s) * ints_.get_eri()(get_4index(p, q, r, sigma));
           }
+          tmp_s[INDEX(p, q, r, s)] = val;
         }
       }
     }
+  }
 
-    // (mu, nu, lambda, s) -> (mu, nu, r, s)
-    for (int p = 0; p < scf_.n_ao; ++p) {
-      for (int q = 0; q < scf_.n_ao; ++q) {
-        for (int r = 0; r < scf_.n_ao; ++r) {
-          for (int s = 0; s < scf_.n_ao; ++s) {
-            val = 0.0;
-            for (int lambda = 0; lambda < scf_.n_ao; ++lambda) {
-              val += coeffs(lambda, r) * tmp_s[INDEX(p, q, lambda, s)];
-            }
-            tmp_r[INDEX(p, q, r, s)] = val;
+  // (mu, nu, lambda, s) -> (mu, nu, r, s)
+  for (int p = 0; p < scf_.n_ao; ++p) {
+    for (int q = 0; q < scf_.n_ao; ++q) {
+      for (int r = 0; r < scf_.n_ao; ++r) {
+        for (int s = 0; s < scf_.n_ao; ++s) {
+          val = 0.0;
+          for (int lambda = 0; lambda < scf_.n_ao; ++lambda) {
+            val += coeffs(lambda, r) * tmp_s[INDEX(p, q, lambda, s)];
           }
+          tmp_r[INDEX(p, q, r, s)] = val;
         }
       }
     }
+  }
 
-    // (mu, nu, r, s) -> (mu, q, r, s)
-    for (int p = 0; p < scf_.n_ao; ++p) {
-      for (int q = 0; q < scf_.n_ao; ++q) {
-        for (int r = 0; r < scf_.n_ao; ++r) {
-          for (int s = 0; s < scf_.n_ao; ++s) {
-            val = 0.0;
-            for (int nu = 0; nu < scf_.n_ao; ++nu) {
-              val += coeffs(nu, q) * tmp_r[INDEX(p, nu, r, s)];
-            }
-            tmp_q[INDEX(p, q, r, s)] = val;
+  // (mu, nu, r, s) -> (mu, q, r, s)
+  for (int p = 0; p < scf_.n_ao; ++p) {
+    for (int q = 0; q < scf_.n_ao; ++q) {
+      for (int r = 0; r < scf_.n_ao; ++r) {
+        for (int s = 0; s < scf_.n_ao; ++s) {
+          val = 0.0;
+          for (int nu = 0; nu < scf_.n_ao; ++nu) {
+            val += coeffs(nu, q) * tmp_r[INDEX(p, nu, r, s)];
           }
+          tmp_q[INDEX(p, q, r, s)] = val;
         }
       }
     }
+  }
 
-    // (mu, q, r, s) -> (p, q, r, s)
-    for (int p = 0; p < scf_.n_ao; ++p) {
-      for (int q = 0; q < scf_.n_ao; ++q) {
-        for (int r = 0; r < scf_.n_ao; ++r) {
-          for (int s = 0; s < scf_.n_ao; ++s) {
-            val = 0.0;
-            for (int mu = 0; mu < scf_.n_ao; ++mu) {
-              val += coeffs(mu, p) * tmp_q[INDEX(mu, q, r, s)];
-            }
-            eri_mo(get_4index(p, q, r, s)) = val;
+  // (mu, q, r, s) -> (p, q, r, s)
+  for (int p = 0; p < scf_.n_ao; ++p) {
+    for (int q = 0; q < scf_.n_ao; ++q) {
+      for (int r = 0; r < scf_.n_ao; ++r) {
+        for (int s = 0; s < scf_.n_ao; ++s) {
+          val = 0.0;
+          for (int mu = 0; mu < scf_.n_ao; ++mu) {
+            val += coeffs(mu, p) * tmp_q[INDEX(mu, q, r, s)];
           }
-        }
-      }
-    }
-
-  } else {
-    // MO indices
-    for (int p = 0; p < scf_.n_ao; ++p) {
-      for (int q = 0; q < scf_.n_ao; ++q) {
-        for (int r = 0; r < scf_.n_ao; ++r) {
-          for (int s = 0; s < scf_.n_ao; ++s) {
-            // AO indices
-            val = 0;
-            for (int mu = 0; mu < scf_.n_ao; ++mu) {
-              for (int nu = 0; nu < scf_.n_ao; ++nu) {
-                for (int lambda = 0; lambda < scf_.n_ao; ++lambda) {
-                  for (int sigma = 0; sigma < scf_.n_ao; ++sigma) {
-                    val += coeffs(mu, p) * coeffs(nu, q) *
-                           ints_.get_eri()(get_4index(mu, nu, lambda, sigma)) *
-                           coeffs(lambda, r) * coeffs(sigma, s);
-                  }
-                }
-              }
-            }
-            eri_mo(get_4index(p, q, r, s)) = val;
-          }
+          eri_mo(get_4index(p, q, r, s)) = val;
         }
       }
     }
@@ -165,19 +138,14 @@ CC::antisymmetrise(const Eigen::Tensor<double, 4> &tensor_in) const {
 }
 
 Eigen::MatrixXd CC::get_fock_spin() const {
-  Eigen::MatrixXd h_pq = spatial2spin_1b(ints_.get_T() + ints_.get_V());
   Eigen::MatrixXd fock_spin = Eigen::MatrixXd::Zero(n_ao, n_ao);
+  Eigen::VectorXd mo_e_space = scf_.get_mo_energies();
 
-  double val = 0.0;
-  for (int p = 0; p < n_ao; ++p) {
-    for (int q = 0; q < n_ao; ++q) {
-      val = 0.0;
-      for (int m = 0; m < n_occ; ++m) {
-        val += eri_anti(p, m, q, m);
-      }
-      fock_spin(p, q) = val;
-    }
+  for (int p = 0; p < mo_e_space.size(); ++p) {
+    fock_spin(2 * p, 2 * p) = mo_e_space(p);
+    fock_spin(2 * p + 1, 2 * p + 1) = mo_e_space(p);
   }
+
   return fock_spin;
 }
 
@@ -206,19 +174,20 @@ void CC::init_amplitudes() {
   }
 }
 
-void CC::compute_mp2_e() const {
-  double mp2_e = 0.0;
+double CC::compute_mp2_energy() const {
+  double mp2_energy = 0.0;
   for (int i = 0; i < n_occ; ++i) {
     for (int j = 0; j < n_occ; ++j) {
       for (int a = 0; a < n_virtual; ++a) {
         for (int b = 0; b < n_virtual; ++b) {
-          mp2_e += (eri_anti(i, j, a + n_occ, b + n_occ)) * t2(i, j, a, b);
+          mp2_energy += (eri_anti(i, j, a + n_occ, b + n_occ)) * t2(i, j, a, b);
         }
       }
     }
   }
-  mp2_e = mp2_e / 4.0;
-  fmt::println("MP2 Energy using Amplitudes: {}\n", mp2_e);
+  mp2_energy = mp2_energy / 4.0;
+  fmt::println("MP2 Energy using Amplitudes: {}\n", mp2_energy);
+  return mp2_energy;
 }
 
 void CC::build_taus() {
@@ -239,7 +208,486 @@ void CC::build_taus() {
   }
 }
 
-void CC::build_intermediates() {}
+void CC::build_intermediates() {
+  build_F();
+  build_W();
+}
+
+void CC::build_F() {
+  F = Eigen::MatrixXd::Zero(n_ao, n_ao);
+  double first = 0.0;
+  double second = 0.0;
+  double third = 0.0;
+  double fourth = 0.0;
+
+  // Occupied - Occupied
+  for (int m = 0; m < n_occ; ++m) {
+    for (int i = 0; i < n_occ; ++i) {
+      first = 0.0;
+      second = 0.0;
+      third = 0.0;
+      fourth = 0.0;
+
+      first = (m == i) ? 0.0 : fock(m, i);
+
+      for (int e = 0; e < n_virtual; ++e) {
+        second += t1(i, e) * fock(m, n_occ + e);
+      }
+
+      for (int e = 0; e < n_virtual; ++e) {
+        for (int n = 0; n < n_occ; ++n) {
+          third += t1(n, e) * eri_anti(m, n, i, e + n_occ);
+        }
+      }
+
+      for (int e = 0; e < n_virtual; ++e) {
+        for (int f = 0; f < n_virtual; ++f) {
+          for (int n = 0; n < n_occ; ++n) {
+            fourth +=
+                tau_tilde(i, n, e, f) * eri_anti(m, n, e + n_occ, f + n_occ);
+          }
+        }
+      }
+
+      F(m, i) = first + 0.5 * second + third + 0.5 * fourth;
+    }
+  }
+
+  // Virtual - Virtual
+  for (int a = 0; a < n_virtual; ++a) {
+    for (int e = 0; e < n_virtual; ++e) {
+      first = 0.0;
+      second = 0.0;
+      third = 0.0;
+      fourth = 0.0;
+
+      first = (a == e) ? 0.0 : fock(a + n_occ, e + n_occ);
+
+      for (int m = 0; m < n_occ; ++m) {
+        second += t1(m, a) * fock(m, e + n_occ);
+      }
+
+      for (int m = 0; m < n_occ; ++m) {
+        for (int f = 0; f < n_virtual; ++f) {
+          third += t1(m, f) * eri_anti(m, a + n_occ, f + n_occ, e + n_occ);
+        }
+      }
+
+      for (int m = 0; m < n_occ; ++m) {
+        for (int n = 0; n < n_occ; ++n) {
+          for (int f = 0; f < n_virtual; ++f) {
+            fourth +=
+                tau_tilde(m, n, a, f) * eri_anti(m, n, e + n_occ, f + n_occ);
+          }
+        }
+      }
+      F(a + n_occ, e + n_occ) = first - 0.5 * second + third - 0.5 * fourth;
+    }
+  }
+
+  // Occupied - Virtual | Virtual - Occupied
+  for (int m = 0; m < n_occ; ++m) {
+    for (int e = 0; e < n_virtual; ++e) {
+      first = 0.0;
+      second = 0.0;
+
+      first = fock(m, e + n_occ);
+
+      for (int n = 0; n < n_occ; ++n) {
+        for (int f = 0; f < n_virtual; ++f) {
+          second += t1(n, f) * eri_anti(m, n, e + n_occ, f + n_occ);
+        }
+      }
+
+      F(m, e + n_occ) = first + second;
+      F(e + n_occ, m) = first + second;
+    }
+  }
+}
+
+void pretty_print_4d(const Eigen::Tensor<double, 4> &tensor) {
+  int nnz = 0;
+  double sum = 0.0;
+  for (int i = 0; i < tensor.dimension(0); ++i) {
+    for (int j = 0; j < tensor.dimension(1); ++j) {
+      for (int k = 0; k < tensor.dimension(2); ++k) {
+        for (int l = 0; l < tensor.dimension(3); ++l) {
+          if (abs(tensor(i, j, k, l)) > 1e-6) {
+            fmt::println("tensor({:2}, {:2}, {:2}, {:2}) = {: 15.9f}", i, j, k,
+                         l, tensor(i, j, k, l));
+            ++nnz;
+            sum += tensor(i, j, k, l);
+          }
+        }
+      }
+    }
+  }
+  fmt::println("Non-zero elements: {}", nnz);
+  fmt::println("Sum: {:.17f}", sum);
+}
+
+void CC::build_W() {
+  W.resize(n_ao, n_ao, n_ao, n_ao);
+  W.setZero();
+  double first = 0.0;
+  double second = 0.0;
+  double third = 0.0;
+  double fourth = 0.0;
+
+  // Occupied - Occupied - Occupied - Occupied
+  for (int m = 0; m < n_occ; ++m) {
+    for (int n = 0; n < n_occ; ++n) {
+      for (int i = 0; i < n_occ; ++i) {
+        for (int j = 0; j < n_occ; ++j) {
+          first = 0.0;
+          second = 0.0;
+          third = 0.0;
+
+          first = eri_anti(m, n, i, j);
+
+          for (int e = 0; e < n_virtual; ++e) {
+            second += t1(j, e) * eri_anti(m, n, i, e + n_occ);
+            second -= t1(i, e) * eri_anti(m, n, e + n_occ, i);
+          }
+
+          for (int e = 0; e < n_virtual; ++e) {
+            for (int f = 0; f < n_virtual; ++f) {
+              third += tau(i, j, e, f) * eri_anti(m, n, e + n_occ, f + n_occ);
+            }
+          }
+
+          W(m, n, i, j) = first + second + 0.25 * third;
+        }
+      }
+    }
+  }
+
+  // Virtual - Virtual - Virtual - Virtual
+  for (int a = 0; a < n_virtual; ++a) {
+    for (int b = 0; b < n_virtual; ++b) {
+      for (int e = 0; e < n_virtual; ++e) {
+        for (int f = 0; f < n_virtual; ++f) {
+          first = 0.0;
+          second = 0.0;
+          third = 0.0;
+
+          first = eri_anti(a + n_occ, b + n_occ, e + n_occ, f + n_occ);
+
+          for (int m = 0; m < n_occ; ++m) {
+            second += t1(m, b) * eri_anti(a + n_occ, m, e + n_occ, f + n_occ);
+            second -= t1(m, a) * eri_anti(b + n_occ, m, e + n_occ, f + n_occ);
+          }
+
+          for (int m = 0; m < n_occ; ++m) {
+            for (int n = 0; n < n_occ; ++n) {
+              third += tau(m, n, a, b) * eri_anti(m, n, e + n_occ, f + n_occ);
+            }
+          }
+
+          W(a + n_occ, b + n_occ, e + n_occ, f + n_occ) =
+              first - second + 0.25 * third;
+        }
+      }
+    }
+  }
+
+  // Occupied - Virtual - Virtual - Occupied
+  // Virtual - Occupied - Occupied - Virtual
+  for (int m = 0; m < n_occ; ++m) {
+    for (int b = 0; b < n_virtual; ++b) {
+      for (int e = 0; e < n_virtual; ++e) {
+        for (int j = 0; j < n_occ; ++j) {
+          first = 0.0;
+          second = 0.0;
+          third = 0.0;
+          fourth = 0.0;
+
+          first = eri_anti(m, b + n_occ, e + n_occ, j);
+
+          for (int f = 0; f < n_virtual; ++f) {
+            second += t1(j, f) * eri_anti(m, b + n_occ, e + n_occ, f + n_occ);
+          }
+
+          for (int n = 0; n < n_occ; ++n) {
+            third += t1(n, b) * eri_anti(m, n, e + n_occ, j);
+          }
+
+          for (int n = 0; n < n_occ; ++n) {
+            for (int f = 0; f < n_virtual; ++f) {
+              fourth += (0.5 * t2(j, n, f, b) + t1(j, f) * t1(n, b)) *
+                        eri_anti(m, n, e + n_occ, f + n_occ);
+            }
+          }
+
+          W(m, b + n_occ, e + n_occ, j) = first + second - third - fourth;
+          // W(e + n_occ, j, m, b + n_occ) = first + second - third - fourth;
+        }
+      }
+    }
+  }
+}
+
+void CC::build_denominators() {
+  build_D1();
+  build_D2();
+}
+
+void CC::build_D1() {
+  D1 = Eigen::MatrixXd::Zero(n_occ, n_virtual);
+
+  for (int i = 0; i < n_occ; ++i) {
+    for (int a = 0; a < n_virtual; ++a) {
+      D1(i, a) = fock(i, i) - fock(a + n_occ, a + n_occ);
+    }
+  }
+}
+
+void CC::build_D2() {
+  D2.resize(n_occ, n_occ, n_virtual, n_virtual);
+
+  for (int i = 0; i < n_occ; ++i) {
+    for (int j = 0; j < n_occ; ++j) {
+      for (int a = 0; a < n_virtual; ++a) {
+        for (int b = 0; b < n_virtual; ++b) {
+          D2(i, j, a, b) = fock(i, i) + fock(j, j) -
+                           fock(a + n_occ, a + n_occ) -
+                           fock(b + n_occ, b + n_occ);
+        }
+      }
+    }
+  }
+}
+
+void CC::update_amplitudes() {
+  Eigen::MatrixXd t1_new = compute_t1();
+  Eigen::Tensor<double, 4> t2_new = compute_t2();
+  t1 = t1_new;
+  t2 = t2_new;
+}
+
+Eigen::MatrixXd CC::compute_t1() const {
+  Eigen::MatrixXd t1_new = Eigen::MatrixXd::Zero(n_occ, n_virtual);
+  double first = 0.0;
+  double second = 0.0;
+  double third = 0.0;
+  double fourth = 0.0;
+  double fifth = 0.0;
+  double sixth = 0.0;
+  double seventh = 0.0;
+  for (int i = 0; i < n_occ; ++i) {
+    for (int a = 0; a < n_virtual; ++a) {
+      first = 0.0;
+      second = 0.0;
+      third = 0.0;
+      fourth = 0.0;
+      sixth = 0.0;
+      seventh = 0.0;
+
+      first = fock(i, a + n_occ);
+
+      for (int e = 0; e < n_virtual; ++e) {
+        second += t1(i, e) * F(a + n_occ, e + n_occ);
+      }
+
+      for (int m = 0; m < n_occ; ++m) {
+        third += t1(m, a) * F(m, i);
+      }
+
+      for (int m = 0; m < n_occ; ++m) {
+        for (int e = 0; e < n_virtual; ++e) {
+          fourth += t2(i, m, a, e) * F(m, e + n_occ);
+        }
+      }
+
+      for (int n = 0; n < n_occ; ++n) {
+        for (int f = 0; f < n_virtual; ++f) {
+          fifth += t1(n, f) * eri_anti(n, a + n_occ, i, f + n_occ);
+        }
+      }
+
+      for (int m = 0; m < n_occ; ++m) {
+        for (int e = 0; e < n_virtual; ++e) {
+          for (int f = 0; f < n_virtual; ++f) {
+            sixth +=
+                t2(i, m, e, f) * eri_anti(m, a + n_occ, e + n_occ, f + n_occ);
+          }
+        }
+      }
+
+      for (int m = 0; m < n_occ; ++m) {
+        for (int e = 0; e < n_virtual; ++e) {
+          for (int n = 0; n < n_occ; ++n) {
+            seventh += t2(m, n, a, e) * eri_anti(n, m, e + n_occ, i);
+          }
+        }
+      }
+
+      double numer =
+          first + second - third + fourth - fifth - 0.5 * sixth - 0.5 * seventh;
+      t1_new(i, a) = numer / D1(i, a);
+    }
+  }
+  return t1_new;
+}
+
+Eigen::Tensor<double, 4> CC::compute_t2() const {
+  Eigen::Tensor<double, 4> t2_new(n_occ, n_occ, n_ao, n_ao);
+  double first = 0.0;
+  double second = 0.0;
+  double third = 0.0;
+  double fourth = 0.0;
+  double fifth = 0.0;
+  double sixth = 0.0;
+  double seventh = 0.0;
+  double eighth = 0.0;
+
+  double inner = 0.0;
+
+  for (int i = 0; i < n_occ; ++i) {
+    for (int j = 0; j < n_occ; ++j) {
+      for (int a = 0; a < n_virtual; ++a) {
+        for (int b = 0; b < n_virtual; ++b) {
+          first = 0.0;
+          second = 0.0;
+          third = 0.0;
+          fourth = 0.0;
+          fifth = 0.0;
+          sixth = 0.0;
+          seventh = 0.0;
+          eighth = 0.0;
+
+          // first
+          first = eri_anti(i, j, a + n_occ, b + n_occ);
+
+          // second
+          for (int e = 0; e < n_virtual; ++e) {
+            // original
+            inner = 0.0;
+            for (int m = 0; m < n_occ; ++m) {
+              inner += t1(m, b) * F(m, e + n_occ);
+            }
+            second += t2(i, j, a, e) * (F(b + n_occ, e + n_occ) - 0.5 * inner);
+
+            // permuted
+            inner = 0.0;
+            for (int m = 0; m < n_occ; ++m) {
+              inner += t1(m, a) * F(m, e + n_occ);
+            }
+            second -= t2(i, j, b, e) * (F(a + n_occ, e + n_occ) - 0.5 * inner);
+          }
+
+          // third
+          for (int m = 0; m < n_occ; ++m) {
+            // original
+            inner = 0.0;
+            for (int e = 0; e < n_virtual; ++e) {
+              inner += t1(j, e) * F(m, e + n_occ);
+            }
+            third += t2(i, m, a, b) * (F(m, j) + 0.5 * inner);
+
+            // permuted
+            inner = 0.0;
+            for (int e = 0; e < n_virtual; ++e) {
+              inner += t1(i, e) * F(m, e + n_occ);
+            }
+            third -= t2(j, m, a, b) * (F(m, i) + 0.5 * inner);
+          }
+
+          // fourth
+          for (int m = 0; m < n_occ; ++m) {
+            for (int n = 0; n < n_occ; ++n) {
+              fourth += tau(m, n, a, b) * W(m, n, i, j);
+            }
+          }
+
+          // fifth
+          for (int e = 0; e < n_virtual; ++e) {
+            for (int f = 0; f < n_virtual; ++f) {
+              fifth += tau(i, j, e, f) *
+                       W(a + n_occ, b + n_occ, e + n_occ, f + n_occ);
+            }
+          }
+
+          // sixth
+          for (int m = 0; m < n_occ; ++m) {
+            for (int e = 0; e < n_virtual; ++e) {
+              // (ij,ab)
+              sixth +=
+                  t2(i, m, a, e) * W(m, b + n_occ, e + n_occ, j) -
+                  t1(i, e) * t1(m, a) * eri_anti(m, b + n_occ, e + n_occ, j);
+              // (ij,ba)
+              sixth -=
+                  t2(i, m, b, e) * W(m, a + n_occ, e + n_occ, j) -
+                  t1(i, e) * t1(m, b) * eri_anti(m, a + n_occ, e + n_occ, j);
+              // (ji,ab)
+              sixth -=
+                  t2(j, m, a, e) * W(m, b + n_occ, e + n_occ, i) -
+                  t1(j, e) * t1(m, a) * eri_anti(m, b + n_occ, e + n_occ, i);
+              // (ji,ba)
+              sixth +=
+                  t2(j, m, b, e) * W(m, a + n_occ, e + n_occ, i) -
+                  t1(j, e) * t1(m, b) * eri_anti(m, a + n_occ, e + n_occ, i);
+            }
+          }
+
+          // seventh
+          for (int e = 0; e < n_virtual; ++e) {
+            seventh += t1(i, e) * eri_anti(a + n_occ, b + n_occ, e + n_occ, j);
+            seventh -= t1(j, e) * eri_anti(a + n_occ, b + n_occ, e + n_occ, i);
+          }
+
+          // eighth
+          for (int m = 0; m < n_occ; ++m) {
+            eighth += t1(m, a) * eri_anti(m, b + n_occ, i, j);
+            eighth -= t1(m, b) * eri_anti(m, a + n_occ, i, j);
+          }
+
+          double numer = first + second - third + 0.5 * fourth + 0.5 * fifth +
+                         sixth + seventh - eighth;
+          t2_new(i, j, a, b) = numer / D2(i, j, a, b);
+        }
+      }
+    }
+  }
+  return t2_new;
+}
+
+double CC::get_cc_energy() {
+  double energy = 0.0;
+
+  double first = 0.0;
+  double second = 0.0;
+  double third = 0.0;
+
+  for (int i = 0; i < n_occ; ++i) {
+    for (int a = 0; a < n_virtual; ++a) {
+      first += t1(i, a) * fock(i, a + n_occ);
+    }
+  }
+
+  for (int i = 0; i < n_occ; ++i) {
+    for (int j = 0; j < n_occ; ++j) {
+      for (int a = 0; a < n_virtual; ++a) {
+        for (int b = 0; b < n_virtual; ++b) {
+          second += t2(i, j, a, b) * eri_anti(i, j, a + n_occ, b + n_occ);
+        }
+      }
+    }
+  }
+
+  for (int i = 0; i < n_occ; ++i) {
+    for (int j = 0; j < n_occ; ++j) {
+      for (int a = 0; a < n_virtual; ++a) {
+        for (int b = 0; b < n_virtual; ++b) {
+          third += t1(i, a) * t1(j, b) * eri_anti(i, j, a + n_occ, b + n_occ);
+        }
+      }
+    }
+  }
+
+  energy = first + 0.25 * second + 0.5 * third;
+  return energy;
+}
 
 void CC::prepare() {
   Eigen::VectorXd eri_spatial = get_eri_mo();
@@ -247,13 +695,43 @@ void CC::prepare() {
   fock = get_fock_spin();
 
   init_amplitudes();
-
-  compute_mp2_e();
+  energy = compute_mp2_energy();
 
   build_taus();
+  build_intermediates();
+  build_denominators();
+  std::cout << "F_initial\n\n" << F << "\n\n";
 }
 
 void CC::run() {
   fmt::println("\n\n=== Starting Coupled Cluster ===\n");
   prepare();
+
+  const int n_iter = 2;
+  const double energy_tol = 1e-10;
+  const double t1_tol = 1e-10;
+
+  for (int i = 0; i < n_iter; ++i) {
+    Eigen::MatrixXd t1_new = compute_t1();
+    Eigen::Tensor<double, 4> t2_new = compute_t2();
+    // std::cout << t1_new << "\n";
+
+    double t1_rms = (t1 - t1_new).norm();
+    
+    t1 = t1_new;
+    t2 = t2_new;
+    build_taus();
+    build_intermediates();
+    // std::cout << "F = \n" << F << "\n";
+    std::cout << "\n" << t1 << "\n\n";
+    double energy_new = get_cc_energy();
+    fmt::println("CC Energy = {: 20.13f}", energy_new);
+    
+    // check convergence
+    if (abs(energy_new - energy) < energy_tol || t1_rms < t1_tol) {
+      fmt::println("CC Converged");
+      return;
+    }
+  }
+  fmt::println("CC FAILED to converge");
 }
