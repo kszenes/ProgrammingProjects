@@ -305,20 +305,41 @@ void CC::build_F() {
   }
 }
 
-void pretty_print_4d(const Eigen::Tensor<double, 4> &tensor) {
+void pretty_print(const Eigen::Tensor<double, 4> &tensor,
+                  bool with_vals = false) {
   int nnz = 0;
   double sum = 0.0;
   for (int i = 0; i < tensor.dimension(0); ++i) {
     for (int j = 0; j < tensor.dimension(1); ++j) {
       for (int k = 0; k < tensor.dimension(2); ++k) {
         for (int l = 0; l < tensor.dimension(3); ++l) {
-          if (abs(tensor(i, j, k, l)) > 1e-6) {
-            fmt::println("tensor({:2}, {:2}, {:2}, {:2}) = {: 15.9f}", i, j, k,
-                         l, tensor(i, j, k, l));
+          if (abs(tensor(i, j, k, l)) > 1e-9) {
+            if (with_vals) {
+              fmt::println("tensor({:2}, {:2}, {:2}, {:2}) = {: 15.9f}", i, j,
+                           k, l, tensor(i, j, k, l));
+            }
             ++nnz;
             sum += tensor(i, j, k, l);
           }
         }
+      }
+    }
+  }
+  fmt::println("Non-zero elements: {}", nnz);
+  fmt::println("Sum: {:.17f}", sum);
+}
+
+void pretty_print(const Eigen::MatrixXd &tensor, bool with_vals = false) {
+  int nnz = 0;
+  double sum = 0.0;
+  for (int i = 0; i < tensor.rows(); ++i) {
+    for (int j = 0; j < tensor.cols(); ++j) {
+      if (abs(tensor(i, j)) > 1e-9) {
+        if (with_vals) {
+          fmt::println("matrix({:2}, {:2}) = {: 15.9f}", i, j, tensor(i, j));
+        }
+        ++nnz;
+        sum += tensor(i, j);
       }
     }
   }
@@ -342,12 +363,13 @@ void CC::build_W() {
           first = 0.0;
           second = 0.0;
           third = 0.0;
+          fourth = 0.0;
 
           first = eri_anti(m, n, i, j);
 
           for (int e = 0; e < n_virtual; ++e) {
             second += t1(j, e) * eri_anti(m, n, i, e + n_occ);
-            second -= t1(i, e) * eri_anti(m, n, e + n_occ, i);
+            second -= t1(i, e) * eri_anti(m, n, e + n_occ, j);
           }
 
           for (int e = 0; e < n_virtual; ++e) {
@@ -370,6 +392,7 @@ void CC::build_W() {
           first = 0.0;
           second = 0.0;
           third = 0.0;
+          fourth = 0.0;
 
           first = eri_anti(a + n_occ, b + n_occ, e + n_occ, f + n_occ);
 
@@ -392,7 +415,6 @@ void CC::build_W() {
   }
 
   // Occupied - Virtual - Virtual - Occupied
-  // Virtual - Occupied - Occupied - Virtual
   for (int m = 0; m < n_occ; ++m) {
     for (int b = 0; b < n_virtual; ++b) {
       for (int e = 0; e < n_virtual; ++e) {
@@ -420,7 +442,6 @@ void CC::build_W() {
           }
 
           W(m, b + n_occ, e + n_occ, j) = first + second - third - fourth;
-          // W(e + n_occ, j, m, b + n_occ) = first + second - third - fourth;
         }
       }
     }
@@ -480,6 +501,7 @@ Eigen::MatrixXd CC::compute_t1() const {
       second = 0.0;
       third = 0.0;
       fourth = 0.0;
+      fifth = 0.0;
       sixth = 0.0;
       seventh = 0.0;
 
@@ -697,36 +719,40 @@ void CC::prepare() {
   init_amplitudes();
   energy = compute_mp2_energy();
 
-  build_taus();
-  build_intermediates();
   build_denominators();
-  std::cout << "F_initial\n\n" << F << "\n\n";
 }
 
 void CC::run() {
   fmt::println("\n\n=== Starting Coupled Cluster ===\n");
   prepare();
 
-  const int n_iter = 2;
-  const double energy_tol = 1e-10;
-  const double t1_tol = 1e-10;
+  const int n_iter = 50;
+  const double energy_tol = 1e-9;
+  const double t1_tol = -1;
 
   for (int i = 0; i < n_iter; ++i) {
-    Eigen::MatrixXd t1_new = compute_t1();
-    Eigen::Tensor<double, 4> t2_new = compute_t2();
-    // std::cout << t1_new << "\n";
-
-    double t1_rms = (t1 - t1_new).norm();
-    
-    t1 = t1_new;
-    t2 = t2_new;
+    fmt::println("\n=== Iteration {} ===\n", i);
     build_taus();
     build_intermediates();
-    // std::cout << "F = \n" << F << "\n";
-    std::cout << "\n" << t1 << "\n\n";
+    // std::cout << "\nF\n\n" << F << "\n\n";
+    // pretty_print(t1);
+    // pretty_print(W);
+
+    Eigen::MatrixXd t1_new = compute_t1();
+    Eigen::Tensor<double, 4> t2_new = compute_t2();
+
+    double t1_rms = (t1 - t1_new).norm();
+
+    t1 = t1_new;
+    t2 = t2_new;
+
+    // std::cout << "\nt1\n\n" << t1 << "\n\n";
+    // pretty_print(t1, true);
+    // pretty_print(t2);
+
     double energy_new = get_cc_energy();
     fmt::println("CC Energy = {: 20.13f}", energy_new);
-    
+
     // check convergence
     if (abs(energy_new - energy) < energy_tol || t1_rms < t1_tol) {
       fmt::println("CC Converged");
