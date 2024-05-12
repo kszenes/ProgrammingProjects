@@ -686,8 +686,9 @@ void CC::run() {
   const int n_iter = 40;
   const double energy_tol = 1e-9;
   const double t1_tol = 1e-9;
-  fmt::println("{:>4} {:>15} {:>15} {:>15}", "iter", "E_CC", "delta_E",
-               "rms(t1)");
+  const double t2_tol = 1e-9;
+  fmt::println("{:>4} {:>15} {:>15} {:>15} {:>15}", "iter", "E_CC", "delta_E",
+               "rms(t1)", "rms(t2)");
 
   for (int iter = 0; iter < n_iter; ++iter) {
     build_taus();
@@ -697,6 +698,9 @@ void CC::run() {
     Eigen::Tensor<double, 4> t2_new = compute_t2();
 
     double t1_rms = (t1 - t1_new).norm();
+    // Eigen tensor does not automatically convert to double
+    Eigen::Tensor<double, 0> t2_rms = ((t2 - t2_new).square().sum().sqrt());
+    double t2_rms_val = t2_rms(0);
 
     t1 = t1_new;
     t2 = t2_new;
@@ -704,11 +708,12 @@ void CC::run() {
     double energy_new = get_cc_energy();
     double e_error = energy_new - energy;
     energy = energy_new;
-    fmt::println("{:4} {: 15.9f} {: 15.9f} {: 15.9f}", iter, energy_new,
-                 e_error, t1_rms);
+
+    fmt::println("{:4} {: 15.9f} {: 15.9f} {: 15.9f} {: 15.9f}", iter,
+                 energy_new, e_error, t1_rms, t2_rms_val);
 
     // check convergence
-    if (abs(e_error) < energy_tol || t1_rms < t1_tol) {
+    if (abs(e_error) < energy_tol || t1_rms < t1_tol || t2_rms_val < t2_tol) {
       fmt::println("\n === CC Converged === \n");
       fmt::println("SCF E_tot: {:> 20.14f}", scf_.get_etot());
       fmt::println("CC Energy: {:> 20.9f}", energy);

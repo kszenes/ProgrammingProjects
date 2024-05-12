@@ -15,7 +15,7 @@ SCF::SCF(IntegralParser &integrals)
 
 void SCF::build_core_hamiltonian() {
   H_core = integrals.get_T() + integrals.get_V();
-  std::cout << "Core Hamiltonian\n" << H_core << "\n\n";
+  // std::cout << "Core Hamiltonian\n" << H_core << "\n\n";
 }
 
 void SCF::build_coeffs() {

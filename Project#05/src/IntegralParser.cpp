@@ -9,16 +9,16 @@ IntegralParser::IntegralParser(const std::string &dir_name) {
   get_nelec(dir_name + "/geom.dat");
   parse_e_nuc(dir_name + "/enuc.dat");
   S = one_elec_parser(dir_name + "/s.dat");
-  std::cout << "Overlap\n" << S << "\n\n";
+  // std::cout << "Overlap\n" << S << "\n\n";
   T = one_elec_parser(dir_name + "/t.dat");
-  std::cout << "Kinetic\n" << T << "\n\n";
+  // std::cout << "Kinetic\n" << T << "\n\n";
   V = one_elec_parser(dir_name + "/v.dat");
-  std::cout << "Nuclear\n" << V << "\n\n";
+  // std::cout << "Nuclear\n" << V << "\n\n";
   eri = two_elec_parser(dir_name + "/eri.dat");
   // std::cout << "ERI\n" << eri << "\n\n";
 
   orthogonalize_S();
-  std::cout << "Orthogonalized S\n" << S << "\n\n";
+  // std::cout << "Orthogonalized S\n" << S << "\n\n";
 
   mu.x = one_elec_parser(dir_name + "/mux.dat");
   mu.y = one_elec_parser(dir_name + "/muy.dat");
@@ -56,14 +56,14 @@ void IntegralParser::get_nelec(const std::string &fname) {
     n_elec += static_cast<int>(charge);
   }
 
-  fmt::println("Number of electrons: {}\n", n_elec);
+  fmt::println("Number of electrons: {}", n_elec);
 }
 
 void IntegralParser::parse_e_nuc(const std::string &fname) {
   auto file = get_file(fname);
 
   file >> this->v_nn;
-  fmt::println("Nuclear energy: {}\n", this->v_nn);
+  fmt::println("Nuclear energy: {}", this->v_nn);
 }
 
 // Matrix(mu_i, nu_j)
