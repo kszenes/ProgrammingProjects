@@ -186,7 +186,6 @@ double CC::compute_mp2_energy() const {
     }
   }
   mp2_energy = mp2_energy / 4.0;
-  fmt::println("MP2 Energy using Amplitudes: {}\n", mp2_energy);
   return mp2_energy;
 }
 
@@ -303,48 +302,6 @@ void CC::build_F() {
       F(e + n_occ, m) = first + second;
     }
   }
-}
-
-void pretty_print(const Eigen::Tensor<double, 4> &tensor,
-                  bool with_vals = false) {
-  int nnz = 0;
-  double sum = 0.0;
-  for (int i = 0; i < tensor.dimension(0); ++i) {
-    for (int j = 0; j < tensor.dimension(1); ++j) {
-      for (int k = 0; k < tensor.dimension(2); ++k) {
-        for (int l = 0; l < tensor.dimension(3); ++l) {
-          if (abs(tensor(i, j, k, l)) > 1e-9) {
-            if (with_vals) {
-              fmt::println("tensor({:2}, {:2}, {:2}, {:2}) = {: 15.9f}", i, j,
-                           k, l, tensor(i, j, k, l));
-            }
-            ++nnz;
-            sum += tensor(i, j, k, l);
-          }
-        }
-      }
-    }
-  }
-  fmt::println("Non-zero elements: {}", nnz);
-  fmt::println("Sum: {:.17f}", sum);
-}
-
-void pretty_print(const Eigen::MatrixXd &tensor, bool with_vals = false) {
-  int nnz = 0;
-  double sum = 0.0;
-  for (int i = 0; i < tensor.rows(); ++i) {
-    for (int j = 0; j < tensor.cols(); ++j) {
-      if (abs(tensor(i, j)) > 1e-9) {
-        if (with_vals) {
-          fmt::println("matrix({:2}, {:2}) = {: 15.9f}", i, j, tensor(i, j));
-        }
-        ++nnz;
-        sum += tensor(i, j);
-      }
-    }
-  }
-  fmt::println("Non-zero elements: {}", nnz);
-  fmt::println("Sum: {:.17f}", sum);
 }
 
 void CC::build_W() {
@@ -723,19 +680,18 @@ void CC::prepare() {
 }
 
 void CC::run() {
-  fmt::println("\n\n=== Starting Coupled Cluster ===\n");
+  fmt::println("\n\n === Starting Coupled Cluster ===\n");
   prepare();
 
   const int n_iter = 40;
   const double energy_tol = 1e-9;
   const double t1_tol = 1e-9;
+  fmt::println("{:>4} {:>15} {:>15} {:>15}", "iter", "E_CC", "delta_E",
+               "rms(t1)");
 
-  for (int i = 0; i < n_iter; ++i) {
-    fmt::println("\n=== Iteration {} ===\n", i);
+  for (int iter = 0; iter < n_iter; ++iter) {
     build_taus();
     build_intermediates();
-    // std::cout << "\nF\n\n" << F << "\n\n";
-    // pretty_print(t1);
 
     Eigen::MatrixXd t1_new = compute_t1();
     Eigen::Tensor<double, 4> t2_new = compute_t2();
@@ -745,16 +701,18 @@ void CC::run() {
     t1 = t1_new;
     t2 = t2_new;
 
-    // std::cout << "\nt1\n\n" << t1 << "\n\n";
-    // pretty_print(t1, true);
-    // pretty_print(t2);
-
     double energy_new = get_cc_energy();
-    fmt::println("CC Energy = {: 20.13f}", energy_new);
+    double e_error = energy_new - energy;
+    energy = energy_new;
+    fmt::println("{:4} {: 15.9f} {: 15.9f} {: 15.9f}", iter, energy_new,
+                 e_error, t1_rms);
 
     // check convergence
-    if (abs(energy_new - energy) < energy_tol || t1_rms < t1_tol) {
-      fmt::println("CC Converged");
+    if (abs(e_error) < energy_tol || t1_rms < t1_tol) {
+      fmt::println("\n === CC Converged === \n");
+      fmt::println("SCF E_tot: {:> 20.14f}", scf_.get_etot());
+      fmt::println("CC Energy: {:> 20.9f}", energy);
+      fmt::println("CC E_tot:  {:> 20.9f}", energy + scf_.get_etot());
       return;
     }
   }

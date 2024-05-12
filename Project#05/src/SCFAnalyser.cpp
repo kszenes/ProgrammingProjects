@@ -46,7 +46,7 @@ Eigen::VectorXd Analyser::get_mo_energies() const {
   Eigen::VectorXd mo_energies =
       (scf.Coeffs.transpose() * scf.Fock * scf.Coeffs).diagonal();
 
-  std::cout << "MO energies\n" << mo_energies << "\n\n";
+  // std::cout << "MO energies\n" << mo_energies << "\n\n";
   return mo_energies;
 }
 
@@ -232,7 +232,7 @@ double Analyser::get_mp2_correction() const {
 
 void Analyser::analyze() {
   fmt::println("\n === Analyzing ===\n");
-  print_mo_coeffs();
+  // print_mo_coeffs();
   double mp2_e = get_mp2_correction();
   fmt::println("SCF Energy     = {: 17.12f}", scf.get_etot());
   fmt::println("MP2 Correction = {: 17.12f}", mp2_e);
