@@ -510,7 +510,7 @@ Eigen::MatrixXd CC::compute_t1() const {
 }
 
 Eigen::Tensor<double, 4> CC::compute_t2() const {
-  Eigen::Tensor<double, 4> t2_new(n_occ, n_occ, n_ao, n_ao);
+  Eigen::Tensor<double, 4> t2_new(n_occ, n_occ, n_virtual, n_virtual);
   double first = 0.0;
   double second = 0.0;
   double third = 0.0;
@@ -683,7 +683,7 @@ void CC::run() {
   fmt::println("\n\n === Starting Coupled Cluster ===\n");
   prepare();
 
-  const int n_iter = 40;
+  const int n_iter = 100;
   const double energy_tol = 1e-9;
   const double t1_tol = 1e-9;
   const double t2_tol = 1e-9;
