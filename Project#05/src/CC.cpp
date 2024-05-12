@@ -369,7 +369,7 @@ void CC::build_W() {
 
           for (int e = 0; e < n_virtual; ++e) {
             second += t1(j, e) * eri_anti(m, n, i, e + n_occ);
-            second -= t1(i, e) * eri_anti(m, n, e + n_occ, j);
+            second -= t1(i, e) * eri_anti(m, n, j, e + n_occ);
           }
 
           for (int e = 0; e < n_virtual; ++e) {
@@ -726,9 +726,9 @@ void CC::run() {
   fmt::println("\n\n=== Starting Coupled Cluster ===\n");
   prepare();
 
-  const int n_iter = 50;
+  const int n_iter = 40;
   const double energy_tol = 1e-9;
-  const double t1_tol = -1;
+  const double t1_tol = 1e-9;
 
   for (int i = 0; i < n_iter; ++i) {
     fmt::println("\n=== Iteration {} ===\n", i);
@@ -736,7 +736,6 @@ void CC::run() {
     build_intermediates();
     // std::cout << "\nF\n\n" << F << "\n\n";
     // pretty_print(t1);
-    // pretty_print(W);
 
     Eigen::MatrixXd t1_new = compute_t1();
     Eigen::Tensor<double, 4> t2_new = compute_t2();
