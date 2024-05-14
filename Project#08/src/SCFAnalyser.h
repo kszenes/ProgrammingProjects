@@ -6,6 +6,7 @@
 #include "SCF.h"
 #include "unsupported/Eigen/CXX11/Tensor"
 #include <vector>
+#include "torch/torch.h"
 
 class Analyser {
 public:
@@ -17,7 +18,7 @@ private:
   void parse_geometry(const std::string &dir_name);
   void print_fock_mo() const;
   void print_mo_coeffs() const;
-  Eigen::VectorXd get_mo_energies() const;
+  torch::Tensor get_mo_energies() const;
   Eigen::Vector3d get_com() const;
   void translate(const Eigen::Vector3d &vec);
 

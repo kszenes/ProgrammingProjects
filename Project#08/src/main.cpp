@@ -1,14 +1,14 @@
 // #include "CC.h"
 #include "IntegralParser.h"
 #include "SCF.h"
-// #include "SCFAnalyser.h"
+#include "SCFAnalyser.h"
 
 void run_example(const std::string &dir_name) {
   IntegralParser integrals(dir_name);
   SCF scf(integrals);
   scf.run();
-  // Analyser analyser(dir_name, integrals, scf);
-  // analyser.analyze();
+  Analyser analyser(dir_name, integrals, scf);
+  analyser.analyze();
   //
   // CC cc(integrals, scf);
   // cc.run();

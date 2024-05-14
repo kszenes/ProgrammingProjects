@@ -14,7 +14,7 @@ find_package(Torch REQUIRED)
 
 # add_compile_options(-fsanitize=address) add_link_options(-fsanitize=address)
 
-add_executable(main main.cpp IntegralParser.cpp SCF.cpp)
+add_executable(main main.cpp IntegralParser.cpp SCF.cpp SCFAnalyser.cpp)
 target_link_libraries(main PRIVATE fmt::fmt-header-only Eigen3::Eigen torch)
 
 target_compile_options(main PRIVATE -Wall -Wextra -Wpedantic)

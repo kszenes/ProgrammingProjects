@@ -34,7 +34,8 @@ void Analyser::parse_geometry(const std::string &dir_name) {
 }
 
 void Analyser::print_fock_mo() const {
-  Eigen::MatrixXd Fock_mo = scf.Coeffs.transpose() * scf.Fock * scf.Coeffs;
+  auto Fock_mo =
+      torch::einsum("ji,jk,kl->il", {scf.Coeffs, scf.Fock, scf.Coeffs});
   std::cout << "Fock in MO basis\n" << Fock_mo << "\n\n";
 }
 
@@ -42,9 +43,10 @@ void Analyser::print_mo_coeffs() const {
   std::cout << "MO Coeffs\n" << scf.Coeffs << "\n\n";
 }
 
-Eigen::VectorXd Analyser::get_mo_energies() const {
-  Eigen::VectorXd mo_energies =
-      (scf.Coeffs.transpose() * scf.Fock * scf.Coeffs).diagonal();
+torch::Tensor Analyser::get_mo_energies() const {
+  auto mo_energies =
+      torch::einsum("ji,jk,kl->il", {scf.Coeffs, scf.Fock, scf.Coeffs})
+          .diagonal();
 
   // std::cout << "MO energies\n" << mo_energies << "\n\n";
   return mo_energies;
@@ -83,9 +85,9 @@ Eigen::Vector3d Analyser::compute_dipole_nuc() const {
 Eigen::Vector3d Analyser::compute_dipole_elec() const {
   Eigen::Vector3d dipole = Eigen::Vector3d::Zero();
 
-  double mux = (scf.Density.transpose() * integrals.get_mu().x).trace();
-  double muy = (scf.Density.transpose() * integrals.get_mu().y).trace();
-  double muz = (scf.Density.transpose() * integrals.get_mu().z).trace();
+  double mux = (scf.Density.transpose(0, 1).matmul(integrals.get_mu().x)).trace().item<double>();
+  double muy = (scf.Density.transpose(0, 1).matmul(integrals.get_mu().y)).trace().item<double>();
+  double muz = (scf.Density.transpose(0, 1).matmul(integrals.get_mu().z)).trace().item<double>();
 
   dipole << mux, muy, muz;
 
@@ -102,7 +104,7 @@ void Analyser::analyze_dipole() const {
 
 Eigen::VectorXd Analyser::get_eri_mo(const bool fast_algo) const {
   Eigen::VectorXd eri_mo = Eigen::VectorXd::Zero(integrals.get_eri().size());
-  const Eigen::MatrixXd &coeffs = scf.Coeffs;
+  const torch::Tensor &coeffs = scf.Coeffs;
 
   const int n_ao = scf.n_ao;
   double val;
@@ -122,7 +124,7 @@ Eigen::VectorXd Analyser::get_eri_mo(const bool fast_algo) const {
           for (int s = 0; s < n_ao; ++s) {
             val = 0.0;
             for (int sigma = 0; sigma < n_ao; ++sigma) {
-              val += coeffs(sigma, s) *
+              val += coeffs.index({sigma, s}).item<double>() *
                      integrals.get_eri()(get_4index(p, q, r, sigma));
             }
             tmp_s[INDEX(p, q, r, s)] = val;
@@ -138,7 +140,7 @@ Eigen::VectorXd Analyser::get_eri_mo(const bool fast_algo) const {
           for (int s = 0; s < n_ao; ++s) {
             val = 0.0;
             for (int lambda = 0; lambda < n_ao; ++lambda) {
-              val += coeffs(lambda, r) * tmp_s[INDEX(p, q, lambda, s)];
+              val += coeffs.index({lambda, r}).item<double>() * tmp_s[INDEX(p, q, lambda, s)];
             }
             tmp_r[INDEX(p, q, r, s)] = val;
           }
@@ -153,7 +155,7 @@ Eigen::VectorXd Analyser::get_eri_mo(const bool fast_algo) const {
           for (int s = 0; s < n_ao; ++s) {
             val = 0.0;
             for (int nu = 0; nu < n_ao; ++nu) {
-              val += coeffs(nu, q) * tmp_r[INDEX(p, nu, r, s)];
+              val += coeffs.index({nu, q}).item<double>() * tmp_r[INDEX(p, nu, r, s)];
             }
             tmp_q[INDEX(p, q, r, s)] = val;
           }
@@ -168,7 +170,7 @@ Eigen::VectorXd Analyser::get_eri_mo(const bool fast_algo) const {
           for (int s = 0; s < n_ao; ++s) {
             val = 0.0;
             for (int mu = 0; mu < n_ao; ++mu) {
-              val += coeffs(mu, p) * tmp_q[INDEX(mu, q, r, s)];
+              val += coeffs.index({mu, p}).item<double>() * tmp_q[INDEX(mu, q, r, s)];
             }
             eri_mo(get_4index(p, q, r, s)) = val;
           }
@@ -189,9 +191,9 @@ Eigen::VectorXd Analyser::get_eri_mo(const bool fast_algo) const {
                 for (int lambda = 0; lambda < n_ao; ++lambda) {
                   for (int sigma = 0; sigma < n_ao; ++sigma) {
                     val +=
-                        coeffs(mu, p) * coeffs(nu, q) *
+                        coeffs.index({mu, p}).item<double>() * coeffs.index({nu, q}).item<double>() *
                         integrals.get_eri()(get_4index(mu, nu, lambda, sigma)) *
-                        coeffs(lambda, r) * coeffs(sigma, s);
+                        coeffs.index({lambda, r}).item<double>() * coeffs.index({sigma, s}).item<double>();
                   }
                 }
               }
@@ -211,7 +213,7 @@ double Analyser::get_mp2_correction() const {
   const int n_occ = scf.n_occ;
   double mp2_e = 0.0;
 
-  Eigen::VectorXd mo_e = get_mo_energies();
+  torch::Tensor mo_e = get_mo_energies();
   Eigen::VectorXd eri_mo = get_eri_mo();
 
   for (int i = 0; i < n_occ; ++i) {
@@ -221,7 +223,7 @@ double Analyser::get_mp2_correction() const {
           double numer = eri_mo(get_4index(i, a, j, b)) *
                          (2 * eri_mo(get_4index(i, a, j, b)) -
                           eri_mo(get_4index(i, b, j, a)));
-          double denom = mo_e(i) + mo_e(j) - mo_e(a) - mo_e(b);
+          double denom = (mo_e[i] + mo_e[j] - mo_e[a] - mo_e[b]).item<double>();
           mp2_e += numer / denom;
         }
       }
