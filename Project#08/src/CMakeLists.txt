@@ -1,0 +1,21 @@
+set(CMAKE_TOOLCHAIN_FILE $ENV{HOME}/vcpkg/scripts/buildsystems/vcpkg.cmake)
+cmake_minimum_required(VERSION 3.21)
+
+project(fmt_test)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+find_package(fmt CONFIG REQUIRED)
+find_package(Eigen3 CONFIG REQUIRED)
+set(CMAKE_PREFIX_PATH
+    "${CMAKE_CURRENT_SOURCE_DIR}/../external/libtorch;${CMAKE_PREFIX_PATH}")
+find_package(Torch REQUIRED)
+
+# add_compile_options(-fsanitize=address) add_link_options(-fsanitize=address)
+
+add_executable(main main.cpp IntegralParser.cpp SCF.cpp)
+target_link_libraries(main PRIVATE fmt::fmt-header-only Eigen3::Eigen torch)
+
+target_compile_options(main PRIVATE -Wall -Wextra -Wpedantic)
+install(TARGETS main DESTINATION ${CMAKE_BINARY_DIR})
